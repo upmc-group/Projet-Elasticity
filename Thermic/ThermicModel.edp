@@ -1,0 +1,63 @@
+real meshsize = 0.01;
+
+//parametres
+real k=377;
+real U=0.5;
+real sigma = 48000000;
+real h1 = 60000;
+real h2 = 30000;
+real T1 = 303;
+real T2 = 303;
+real L=2.41e-8;
+real r1=1;
+real r2=2;
+real r = r2-r1;
+real K=(U/(2*pi*r))*(U/(2*pi*r));
+real Lx = r2-r1;
+real Ly = 0.1;
+
+real[int] xx=[-Lx,Lx,Lx,-Lx];
+real[int] yy=[-Ly,-Ly,Ly,Ly];
+
+
+// maillage du rectangle 
+border rectangle(t=0,1;i) 
+  {
+//  cout << " i = " << i << endl; 
+    int ii = (i+1)%4; real t1 = 1-t;
+    x = xx[i]*t1 + xx[ii]*t;
+    y =  yy[i]*t1 + yy[ii]*t;
+    label = i+1; ; 
+  }
+
+
+int nh = 2*Lx/meshsize;
+int nv = 2*Ly/meshsize;
+int[int] nnr=[nh,nv,nh,nv];
+
+mesh Th= buildmesh(rectangle(nnr));
+plot(Th, wait=1); 
+
+//changement du numero de la region
+int nreg;
+nreg=Th((r2-r1)/2,0.5).region;
+//cout << " numero de region " << nreg << endl;
+int[int] non(2);
+non[0]=nreg;
+non[1]=1;
+Th = change(Th, region= non);
+
+
+fespace Vh(Th,P1);
+Vh T,TT;
+macro grad(u) [dx(u),dy(u)]//EOM
+
+solve thermic(T,TT)= 
+int2d(Th)(k*(grad(T)'*grad(TT))) 
+- int2d(Th)(sigma*K*TT) 
+- int1d(Th,2,4)((h1+h2)*T*TT)
++ int1d(Th,2)(h2*T2*TT)
++ int1d(Th,4)(h1*T1*TT)
+; 
+
+plot(T,wait=1, value=true, fill=true);
